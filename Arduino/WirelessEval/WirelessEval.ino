@@ -26,9 +26,9 @@ void setup()  // Called only once per startup
 int regRead(int addr) {
   /* Write register address */
   char addrAry[2] = {0x8, 0x0};
-  int ntx;  // Number of transmitted bytes
-  int nrx;  // Number of received bytes
-  int regVals[2]; // The two bytes of read out data
+  byte ntx;  // Number of transmitted bytes
+  byte nrx;  // Number of received bytes
+  byte regVals[2]; // The two bytes of read out data
   
   Wire.beginTransmission(i2cAddr); // transmit to device via I2C
   ntx = Wire.write(addrAry, 2);        // sends two bytes
@@ -38,25 +38,18 @@ int regRead(int addr) {
     return -1;
   }
 
-
-
-    /* Receive Register Contents */
+  /* Receive Register Contents */
   Wire.requestFrom(i2cAddr, 2);    // request 2 bytes from slave device #8
 
   nrx = 0;
   while (Wire.available()) { // slave may send less than requested
-    Serial.print("Receiving byte number:");
-    Serial.println(nrx);
     nrx = nrx + 1;
     int c = Wire.read(); // receive a byte as character
     if (nrx < 3) {
       regVals[nrx-1] = c;
     }
-    Serial.println(c, HEX);         // print the character
   }
-  Serial.print("Total Number of bytes received: ");
-  Serial.println(nrx);
-
+  
   if (nrx < 2) {
     Serial.println("*** Error: regRead - could not read register value" );
     return -1;
