@@ -25,11 +25,14 @@ void setup()  // Called only once per startup
 // Takes a 16-bit register address and a 16-bit register value and writes the address to value
 int regRead(int addr) {
   /* Write register address */
-  char addrAry[2] = {0x8, 0x0};
+  byte addrAry[2];
   byte ntx;  // Number of transmitted bytes
   byte nrx;  // Number of received bytes
   byte regVals[2]; // The two bytes of read out data
-  
+
+  addrAry[0] = (addr & 0x00FF);
+  addrAry[1] = (addr >> 8) & 0x00FF; 
+
   Wire.beginTransmission(i2cAddr); // transmit to device via I2C
   ntx = Wire.write(addrAry, 2);        // sends two bytes
   Wire.endTransmission();
@@ -70,7 +73,9 @@ void loop() // Continuous loop
   int val = regRead(regAddrChipId) ;
   Serial.print("Read out value: ");
   Serial.println(val, HEX);
+  delay(2000);
   
-  delay(20000);
+
+  
   
 }
