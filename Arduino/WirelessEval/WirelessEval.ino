@@ -1,15 +1,24 @@
-// Arduino Bluetooth LE Servo Controlled by iOS
+// Arduino Bluetooth LE Evaluation via iOS for 
+// ADI Parts. 
+// Uses I2C ports of ADI parts to program the parts as desired
+// Packets come from iOS device via BTLE in the following format:
+// pkt[7:0]: 1 byte: command ( 0x01 for Write and 0x02 for read)
+// pkt[24:8]: 2 bytes: address
+// pkt[39:25]: 2 bytes: data (for write and read)  
 
 #define i2cAddr 0x64  // 0xC8 write, 0xC9 read, 0x64 address
 #define regAddrChipId 0x08 // Should read 0x03FC
 #define regAddrAdcCtrl 0x10 // Example read/write register
+typedef enum {Idle, CommandReceived, AddressFirstByteReceived, AddressSecondByteReceived, DataFirstByteReceived} StatusType;
+StatusType currentStatus = Idle;
+
  
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
  
 int LED = 13;     // Most Arduino boards have an onboard LED on pin 13
-//SoftwareSerial BLE_Shield(4,5);
+SoftwareSerial BLE_Shield(4,5); // Software serial on pins Tx=4 and Rx=5 to interface BTLE board
  
 void setup()  // Called only once per startup
 { 
@@ -17,7 +26,7 @@ void setup()  // Called only once per startup
   pinMode(LED, OUTPUT);     // Set pin as an output
   digitalWrite(LED, HIGH);  // Turn on LED (ie set to HIGH voltage)
  
-//  BLE_Shield.begin(9600);   // Setup the serial port at 9600 bps. This is the BLE Shield default baud rate.
+  BLE_Shield.begin(9600);   // Setup the serial port at 9600 bps. This is the BLE Shield default baud rate.
 
   Wire.begin(); // join i2c bus (address optional for master)
 }
@@ -25,35 +34,60 @@ void setup()  // Called only once per startup
  
 void loop() // Continuous loop
 {
+  
   int val;
-    // See if new position data is available
-//  if (BLE_Shield.available()) {
+  int addr;
+  int data;
+  int cmd;
+  //   See if new data is available. Receive all the 5 bytes in a packet
+  if (BLE_Shield.available()) {
+    printStatus();
+    switch(currentStatus) {
+      case Idle:
+        currentStatus = CommandReceived;
+        break;
+      case CommandReceived:
+        currentStatus = AddressFirstByteReceived;
+        break;
+      case AddressFirstByteReceived:
+        currentStatus = AddressSecondByteReceived;
+        break;
+      case AddressSecondByteReceived:
+        currentStatus = DataFirstByteReceived;
+        break;
+      case DataFirstByteReceived: 
+        currentStatus = Idle;
+        break;
+      default:
+        currentStatus = Idle;
+    }
 //    myservo.write(BLE_Shield.read());  // Write position to servo
-//  }
-  Serial.println("*Beginning Loop");
+  }
+  
+//  Serial.println("*Beginning Loop");
 
-  /* Read Chip ID */
-  val = regRead(regAddrChipId) ;
-  Serial.print("Chip ID: ");
-  Serial.println(val, HEX);
-
-  /* Read ADC Ctrl */
-  val = regRead(regAddrAdcCtrl) ;
-  Serial.print("ADC CTRL: ");
-  Serial.println(val, HEX);
-
-  /* Write ADC Ctrl */
-  int wrval = 0x1234;
-  int nwr = 0;
-  nwr = regWrite(regAddrAdcCtrl, wrval);
-  Serial.print("Wrote this number of bytes in ADCCTRl overwrite: ");
-  Serial.println(nwr, HEX);
-
-  /* Read ADC Ctrl */
-  val = regRead(regAddrAdcCtrl) ;
-  Serial.print("ADC CTRL: ");
-  Serial.println(val, HEX);
-  delay(2000);
+//  /* Read Chip ID */
+//  val = regRead(regAddrChipId) ;
+//  Serial.print("Chip ID: ");
+//  Serial.println(val, HEX);
+//
+//  /* Read ADC Ctrl */
+//  val = regRead(regAddrAdcCtrl) ;
+//  Serial.print("ADC CTRL: ");
+//  Serial.println(val, HEX);
+//
+//  /* Write ADC Ctrl */
+//  int wrval = 0x1234;
+//  int nwr = 0;
+//  nwr = regWrite(regAddrAdcCtrl, wrval);
+//  Serial.print("Wrote this number of bytes in ADCCTRl overwrite: ");
+//  Serial.println(nwr, HEX);
+//
+//  /* Read ADC Ctrl */
+//  val = regRead(regAddrAdcCtrl) ;
+//  Serial.print("ADC CTRL: ");
+//  Serial.println(val, HEX);
+//  delay(2000);
 }
 
 
@@ -132,4 +166,7 @@ int regWrite(int addr, int value) {
   return ntx;
 }
 
+void printStatus() {
+  Serial.println(currentStatus);
+}
 
