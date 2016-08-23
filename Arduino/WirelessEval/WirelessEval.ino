@@ -5,13 +5,14 @@
 // pkt[7:0]: 1 byte: command ( 0x01 for Write and 0x02 for read)
 // pkt[24:8]: 2 bytes: address
 // pkt[39:25]: 2 bytes: data (for write and read)  
+// Note: Bits [7:0] come first from the air
 
 #define i2cAddr 0x64  // 0xC8 write, 0xC9 read, 0x64 address
 #define regAddrChipId 0x08 // Should read 0x03FC
 #define regAddrAdcCtrl 0x10 // Example read/write register
 typedef enum {Idle, CommandReceived, AddressFirstByteReceived, AddressSecondByteReceived, DataFirstByteReceived} StatusType;
 StatusType currentStatus = Idle;
-
+byte packetBytes[5];
  
 #include <SoftwareSerial.h>
 #include <Wire.h>
@@ -34,14 +35,16 @@ void setup()  // Called only once per startup
  
 void loop() // Continuous loop
 {
-  
+
   int val;
   int addr;
   int data;
   int cmd;
+  byte receivedByte;
   //   See if new data is available. Receive all the 5 bytes in a packet
   if (BLE_Shield.available()) {
-    printStatus();
+    receivedByte = BLE_Shield.read();
+    packetBytes[currentStatus] = receivedByte;
     switch(currentStatus) {
       case Idle:
         currentStatus = CommandReceived;
@@ -56,12 +59,13 @@ void loop() // Continuous loop
         currentStatus = DataFirstByteReceived;
         break;
       case DataFirstByteReceived: 
+        regWrite(packetAddress(), packetData());
+        printStatus();
         currentStatus = Idle;
         break;
       default:
         currentStatus = Idle;
-    }
-//    myservo.write(BLE_Shield.read());  // Write position to servo
+    }   
   }
   
 //  Serial.println("*Beginning Loop");
@@ -167,6 +171,29 @@ int regWrite(int addr, int value) {
 }
 
 void printStatus() {
+  Serial.println("*******");
+  Serial.print("Status: ");
   Serial.println(currentStatus);
+  Serial.print("Command: ");
+  Serial.println(packetBytes[0], HEX); 
+  Serial.print("Address: ");
+  Serial.print(packetBytes[2], HEX); 
+  Serial.println(packetBytes[1], HEX); 
+  Serial.print("Data: ");
+  Serial.print(packetBytes[4], HEX); 
+  Serial.println(packetBytes[3], HEX); 
+
+  /* Readback  */
+  int val = regRead(packetAddress()) ;
+  Serial.print("Readback: ");
+  Serial.println(val, HEX);
+}
+
+int packetAddress() {
+  return int(packetBytes[1]) | (int(packetBytes[2]) << 8);
+}
+
+int packetData() {
+  return int(packetBytes[3]) | (int(packetBytes[4]) << 8);
 }
 

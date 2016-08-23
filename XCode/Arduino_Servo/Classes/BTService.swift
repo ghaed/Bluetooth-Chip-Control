@@ -97,11 +97,23 @@ class BTService: NSObject, CBPeripheralDelegate {
         // See if characteristic has been discovered before writing to it
         if let positionCharacteristic = self.positionCharacteristic {
             // Need a mutable var to pass to writeValue function
-            var positionValue = position
-            let data = NSData(bytes: &positionValue, length: sizeof(UInt8))
+            var positionValue = [position, position]
+            let data = NSData(bytes: &positionValue, length: sizeof(UInt8)*2)
             self.peripheral?.writeValue(data, forCharacteristic: positionCharacteristic, type: CBCharacteristicWriteType.WithResponse)
         }
     }
+    
+  // Writes an array of bytes to BTLE
+  func writeBytes(txBytes: [UInt8]) {
+    if let positionCharacteristic = self.positionCharacteristic {
+        // Need a mutable var to pass to writeValue function
+        var txBytesLocal = txBytes
+        let data = NSData(bytes: &txBytesLocal, length: txBytesLocal.count * sizeof(UInt8))
+        self.peripheral?.writeValue(data, forCharacteristic: positionCharacteristic, type: CBCharacteristicWriteType.WithResponse)
+    }
+    
+  }
+    
   
   func sendBTServiceNotificationWithIsBluetoothConnected(isBluetoothConnected: Bool) {
     let connectionDetails = ["isConnected": isBluetoothConnected]
